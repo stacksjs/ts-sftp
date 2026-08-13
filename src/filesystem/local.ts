@@ -24,9 +24,19 @@ interface LocalFileHandle extends SftpFileHandle {
 }
 
 interface LocalDirectoryHandle extends SftpDirectoryHandle {
-  entries: SftpDirectoryEntry[]
-  served: boolean
+  /** Real path, so each batch can be stat'd as it is served. */
+  realPath: string
+  /** Names still to serve, in order. */
+  remaining: string[]
 }
+
+/**
+ * Entries served per SSH_FXP_READDIR. The protocol expects a directory to come
+ * back over several replies, and a batch is one `lstat` per name — so this
+ * bounds both the work done before a client sees anything and the size of a
+ * single response packet.
+ */
+const READDIR_BATCH = 100
 
 /** Convert node's stat output to SFTP attributes. */
 function toAttributes(stats: {
@@ -153,12 +163,24 @@ export class LocalFileSystem implements SftpFileSystem {
   async opendir(path: string): Promise<SftpDirectoryHandle> {
     const realPath = this.real(path)
     const names = await readdir(realPath)
-    const virtualPath = normalizeVirtualPath(path)
+    const handle: LocalDirectoryHandle = {
+      path: normalizeVirtualPath(path),
+      realPath,
+      remaining: ['.', '..', ...names],
+    }
+    return handle
+  }
 
+  async readdir(handle: SftpDirectoryHandle): Promise<SftpDirectoryEntry[] | undefined> {
+    const local = handle as LocalDirectoryHandle
+    if (local.remaining.length === 0) return undefined
+
+    const batch = local.remaining.splice(0, READDIR_BATCH)
     const entries: SftpDirectoryEntry[] = []
-    for (const name of ['.', '..', ...names]) {
+
+    for (const name of batch) {
       try {
-        const attributes = toAttributes(await lstat(join(realPath, name)))
+        const attributes = toAttributes(await lstat(join(local.realPath, name)))
         entries.push({ filename: name, longname: formatLongname(name, attributes), attributes })
       }
       catch {
@@ -166,15 +188,9 @@ export class LocalFileSystem implements SftpFileSystem {
       }
     }
 
-    const handle: LocalDirectoryHandle = { path: virtualPath, entries, served: false }
-    return handle
-  }
-
-  async readdir(handle: SftpDirectoryHandle): Promise<SftpDirectoryEntry[] | undefined> {
-    const local = handle as LocalDirectoryHandle
-    if (local.served) return undefined
-    local.served = true
-    return local.entries
+    // Every name in this batch vanished: report the next batch rather than an
+    // empty reply, which a client reads as the end of the directory.
+    return entries.length === 0 ? this.readdir(handle) : entries
   }
 
   async stat(path: string): Promise<SftpAttributes> {

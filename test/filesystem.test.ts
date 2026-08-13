@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { SFTP_STATUS } from '../src/constants'
@@ -90,6 +90,46 @@ describe('local file system', () => {
     expect(entries!.map((entry) => entry.filename)).toContain('..')
     // A second call signals the end of the listing.
     expect(await fs.readdir(handle)).toBeUndefined()
+  })
+
+  it('serves a large directory in batches', async () => {
+    // SFTP expects a directory over several replies; stat'ing every entry up
+    // front would block before the client sees anything.
+    const many = join(root, 'many')
+    await mkdir(many)
+    for (let index = 0; index < 250; index++) await writeFile(join(many, `f${index}.txt`), '')
+
+    const handle = await fs.opendir('/many')
+    const batches: number[] = []
+    const names = new Set<string>()
+
+    for (;;) {
+      const entries = await fs.readdir(handle)
+      if (!entries) break
+      batches.push(entries.length)
+      for (const entry of entries) names.add(entry.filename)
+    }
+
+    expect(batches.length).toBeGreaterThan(1)
+    expect(Math.max(...batches)).toBeLessThanOrEqual(100)
+    // 250 files plus . and ..
+    expect(names.size).toBe(252)
+    expect(names.has('f0.txt')).toBe(true)
+    expect(names.has('f249.txt')).toBe(true)
+  })
+
+  it('does not end a listing early when a batch vanishes', async () => {
+    const churn = join(root, 'churn')
+    await mkdir(churn)
+    for (let index = 0; index < 120; index++) await writeFile(join(churn, `g${index}.txt`), '')
+
+    const handle = await fs.opendir('/churn')
+    // Delete everything the first batch would have covered before serving it.
+    for (let index = 0; index < 98; index++) await rm(join(churn, `g${index}.txt`))
+
+    const first = await fs.readdir(handle)
+    expect(first).toBeDefined()
+    expect(first!.length).toBeGreaterThan(0)
   })
 
   it('creates, renames, and removes', async () => {
