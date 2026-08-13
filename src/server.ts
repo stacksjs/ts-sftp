@@ -8,6 +8,7 @@ import type { HostKey, SshPublicKey } from './keys'
 import type { SftpAuthContext, SftpFileSystem, SftpLogger, SftpServerOptions, SftpSessionContext, SftpUserConfig } from './types'
 import { SshConnection } from './connection'
 import { LocalFileSystem } from './filesystem/local'
+import { SocketWriter } from './socket-writer'
 import { generateHostKey, loadHostKey, parsePublicKey } from './keys'
 import { timingSafeEqual } from './wire'
 
@@ -17,6 +18,7 @@ const DEFAULT_MAX_CONNECTIONS = 100
 /** Per-socket state: the SSH connection driving it. */
 interface SocketData {
   connection?: SshConnection
+  writer?: SocketWriter
 }
 
 /** A running server. */
@@ -138,7 +140,12 @@ export class SftpServer {
           }
           this.open++
 
+          // A socket write can be short; the writer holds the remainder until
+          // the socket drains instead of dropping it.
+          const writer = new SocketWriter(socket)
+
           socket.data = {
+            writer,
             connection: new SshConnection({
               hostKey: this.hostKey,
               remoteAddress: socket.remoteAddress,
@@ -146,7 +153,7 @@ export class SftpServer {
               authTimeoutMs: this.options.authTimeoutMs,
               maxAuthAttempts: this.options.maxAuthAttempts,
               write: (data) => {
-                socket.write(data)
+                writer.write(data)
               },
               close: () => {
                 socket.end()
@@ -159,6 +166,9 @@ export class SftpServer {
         },
         data: (socket, data) => {
           socket.data?.connection?.push(new Uint8Array(data))
+        },
+        drain: (socket) => {
+          socket.data?.writer?.drain()
         },
         close: (socket) => {
           this.open = Math.max(0, this.open - 1)
