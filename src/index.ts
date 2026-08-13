@@ -18,7 +18,7 @@ export {
   verifySignature,
 } from './keys'
 export type { HostKey, SshPublicKey } from './keys'
-export { createSftpServer, SftpServer } from './server'
+export { authenticateAgainstUsers, createSftpServer, SftpServer } from './server'
 export type { RunningSftpServer } from './server'
 export { parseOpenFlags, readAttributes, SftpSession, writeAttributes } from './sftp-session'
 export * from './types'

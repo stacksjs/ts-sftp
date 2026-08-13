@@ -5,7 +5,7 @@
 
 import type { TCPSocketListener } from 'bun'
 import type { HostKey, SshPublicKey } from './keys'
-import type { SftpAuthContext, SftpFileSystem, SftpLogger, SftpServerOptions, SftpSessionContext } from './types'
+import type { SftpAuthContext, SftpFileSystem, SftpLogger, SftpServerOptions, SftpSessionContext, SftpUserConfig } from './types'
 import { SshConnection } from './connection'
 import { LocalFileSystem } from './filesystem/local'
 import { generateHostKey, loadHostKey, parsePublicKey } from './keys'
@@ -42,6 +42,31 @@ function resolvePublicKeys(keys: (string | SshPublicKey)[] | undefined): SshPubl
     const parsed = parsePublicKey(key)
     return parsed ? [parsed] : []
   })
+}
+
+/**
+ * The built-in authenticator: a user is accepted when the key that signed the
+ * request is one of theirs, or when their configured password matches.
+ *
+ * A `publickey` context only reaches here after the signature has been
+ * verified against a key listed for that user, so the presence of the key is
+ * the proof.
+ */
+export function authenticateAgainstUsers(
+  users: Record<string, SftpUserConfig> | undefined,
+  context: SftpAuthContext,
+): boolean {
+  const user = users?.[context.username]
+  if (!user) return false
+
+  if (context.method === 'publickey') return context.publicKey !== undefined
+
+  if (context.method === 'password' && user.password !== undefined && context.password !== undefined) {
+    const encoder = new TextEncoder()
+    return timingSafeEqual(encoder.encode(user.password), encoder.encode(context.password))
+  }
+
+  return false
 }
 
 /**
@@ -84,19 +109,7 @@ export class SftpServer {
 
   private async authenticate(context: SftpAuthContext): Promise<boolean> {
     if (this.options.authenticate) return await this.options.authenticate(context)
-
-    const user = this.options.users?.[context.username]
-    if (!user) return false
-
-    // A verified signature over a key we listed is authentication in itself.
-    if (context.method === 'publickey') return context.publicKey !== undefined
-
-    if (context.method === 'password' && user.password !== undefined && context.password !== undefined) {
-      const encoder = new TextEncoder()
-      return timingSafeEqual(encoder.encode(user.password), encoder.encode(context.password))
-    }
-
-    return false
+    return authenticateAgainstUsers(this.options.users, context)
   }
 
   private async createFileSystem(context: SftpSessionContext): Promise<SftpFileSystem> {
