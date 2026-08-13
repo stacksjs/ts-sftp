@@ -141,8 +141,17 @@ export class SftpServer {
           this.open++
 
           // A socket write can be short; the writer holds the remainder until
-          // the socket drains instead of dropping it.
-          const writer = new SocketWriter(socket)
+          // the socket drains instead of dropping it. A peer that stops reading
+          // altogether is hung up on rather than buffered indefinitely.
+          const writer = new SocketWriter(socket, {
+            maxBacklog: this.options.maxWriteBacklog,
+            onOverflow: () => {
+              this.logger.warn?.('closing a connection that stopped reading', {
+                remoteAddress: socket.remoteAddress,
+              })
+              socket.end()
+            },
+          })
 
           socket.data = {
             writer,

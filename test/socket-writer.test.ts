@@ -1,6 +1,6 @@
 import type { WritableSocket } from '../src/socket-writer'
 import { describe, expect, it } from 'bun:test'
-import { SocketWriter } from '../src/socket-writer'
+import { DEFAULT_MAX_BACKLOG, SocketWriter } from '../src/socket-writer'
 import { concat } from '../src/wire'
 
 /** A socket that accepts a fixed number of bytes per write, like a full buffer. */
@@ -111,5 +111,56 @@ describe('socket writer', () => {
     }
 
     expect([...socket.received()]).toEqual([...payload])
+  })
+
+  it('gives up on a peer that stops reading', () => {
+    const socket = socketAccepting(0)
+    let closed = 0
+    const writer = new SocketWriter(socket, { maxBacklog: 32, onOverflow: () => closed++ })
+
+    writer.write(new Uint8Array(20))
+    expect(writer.backlog).toBe(20)
+    expect(writer.stalled).toBe(false)
+
+    // Past the ceiling: the queue is released rather than grown.
+    writer.write(new Uint8Array(20))
+    expect(writer.stalled).toBe(true)
+    expect(writer.backlog).toBe(0)
+    expect(closed).toBe(1)
+  })
+
+  it('reports the overflow once, however much more is written', () => {
+    const socket = socketAccepting(0)
+    let closed = 0
+    const writer = new SocketWriter(socket, { maxBacklog: 8, onOverflow: () => closed++ })
+
+    writer.write(new Uint8Array(16))
+    writer.write(new Uint8Array(16))
+    writer.drain()
+    writer.write(new Uint8Array(16))
+
+    expect(closed).toBe(1)
+    expect(writer.backlog).toBe(0)
+  })
+
+  it('tracks the backlog as the socket drains, not by rescanning it', () => {
+    const socket = socketAccepting(0)
+    const writer = new SocketWriter(socket, { maxBacklog: 1000 })
+
+    writer.write(new Uint8Array(10))
+    writer.write(new Uint8Array(10))
+    expect(writer.backlog).toBe(20)
+
+    socket.open(15)
+    writer.drain()
+    expect(writer.backlog).toBe(5)
+
+    socket.open(5)
+    writer.drain()
+    expect(writer.backlog).toBe(0)
+  })
+
+  it('defaults the ceiling to something a real transfer never reaches', () => {
+    expect(DEFAULT_MAX_BACKLOG).toBeGreaterThanOrEqual(8 * 1024 * 1024)
   })
 })

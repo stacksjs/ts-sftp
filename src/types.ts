@@ -144,6 +144,12 @@ export interface SftpServerOptions {
   /** Drop a connection that has not authenticated within this many ms. Defaults to 30000. */
   authTimeoutMs?: number
   /**
+   * Unsent bytes allowed to pile up for one connection before it is closed.
+   * A client that requests a large download and stops reading would otherwise
+   * hold the whole transfer in the server's memory. Defaults to 16 MiB.
+   */
+  maxWriteBacklog?: number
+  /**
    * Failed authentication attempts allowed before the connection is dropped.
    * Defaults to 6, matching sshd's `MaxAuthTries`. Clients that offer several
    * keys spend one attempt per key, so raise it for agents holding many.
