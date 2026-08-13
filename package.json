@@ -1,7 +1,7 @@
 {
   "name": "ts-sftp",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A zero-dependency SFTP server for Bun — SSH transport, public key auth, and a pluggable file system.",
   "author": "Chris Breuer <chris@stacksjs.org>",
   "license": "MIT",
