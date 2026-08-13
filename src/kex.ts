@@ -35,14 +35,6 @@ export interface ExchangeHashInput {
   sharedSecret: Uint8Array
 }
 
-/** The result of a completed exchange. */
-export interface KexResult {
-  exchangeHash: Uint8Array
-  signature: Uint8Array
-  serverPublicKey: Uint8Array
-  sharedSecret: Uint8Array
-}
-
 /** An ephemeral X25519 key pair for one exchange. */
 export function generateEphemeralKeyPair(): { publicKey: Uint8Array; derive: (peer: Uint8Array) => Uint8Array } {
   const { publicKey, privateKey } = generateKeyPairSync('x25519')

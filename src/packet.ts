@@ -58,10 +58,6 @@ export class PacketCodec {
     this.incoming = { key: keys.key, iv: new Uint8Array(keys.iv) }
   }
 
-  get encrypted(): boolean {
-    return this.outgoing !== undefined
-  }
-
   encode(payload: Uint8Array): Uint8Array {
     const blockSize = this.outgoing ? GCM_BLOCK_SIZE : PLAIN_BLOCK_SIZE
     // The length field is covered by the block alignment only when it is

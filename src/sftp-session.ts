@@ -79,8 +79,6 @@ export class SftpSession {
   private buffered: Uint8Array = new Uint8Array(0)
   private handles = new Map<string, OpenHandle>()
   private nextHandleId = 1
-  /** Requests are answered in arrival order per handle, but may overlap. */
-  private pending = 0
 
   constructor(
     private readonly fs: SftpFileSystem,
@@ -164,7 +162,6 @@ export class SftpSession {
     }
 
     const id = reader.uint32()
-    this.pending++
 
     try {
       await this.handleRequest(type, id, reader)
@@ -178,9 +175,6 @@ export class SftpSession {
         error: error instanceof Error ? error.message : String(error),
       })
       this.status(id, status, error instanceof Error ? error.message : 'request failed')
-    }
-    finally {
-      this.pending--
     }
   }
 

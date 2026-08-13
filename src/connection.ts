@@ -49,7 +49,6 @@ export interface ConnectionOptions {
 }
 
 interface ChannelState {
-  localId: number
   remoteId: number
   remoteWindow: number
   remoteMaxPacket: number
@@ -504,7 +503,6 @@ export class SshConnection {
     }
 
     this.channel = {
-      localId: 0,
       remoteId,
       remoteWindow,
       remoteMaxPacket: Math.min(remoteMaxPacket, MAX_CHANNEL_PACKET),
