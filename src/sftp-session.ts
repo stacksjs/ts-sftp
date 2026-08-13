@@ -97,7 +97,13 @@ export class SftpSession {
 
       const view = new DataView(this.buffered.buffer, this.buffered.byteOffset, this.buffered.byteLength)
       const length = view.getUint32(0, false)
-      if (length === 0 || length > MAX_READ_LENGTH + 1024) throw new Error(`sftp: invalid packet length ${length}`)
+      if (length === 0 || length > MAX_READ_LENGTH + 1024) {
+        // The framing is unrecoverable: everything after this length is at an
+        // unknown offset. Drop what is buffered so the error is raised once,
+        // rather than on every byte that follows it.
+        this.buffered = new Uint8Array(0)
+        throw new Error(`sftp: invalid packet length ${length}`)
+      }
       if (this.buffered.length < 4 + length) return
 
       const packet = this.buffered.subarray(4, 4 + length)
