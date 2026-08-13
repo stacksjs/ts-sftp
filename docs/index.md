@@ -4,7 +4,7 @@ layout: home
 hero:
   name: "ts-sftp"
   text: "An SFTP server for Bun."
-  tagline: "SSH transport, public key auth, and pluggable storage — with no dependencies."
+  tagline: "SSH transport, public key auth, and pluggable storage — implemented from the wire up."
   actions:
     - theme: brand
       text: Get Started
@@ -14,7 +14,7 @@ hero:
       link: https://github.com/stacksjs/ts-sftp
 
 features:
-  - title: "Zero Dependencies"
+  - title: "No Protocol Dependencies"
     icon: "📦"
     details: "Key exchange, ciphers, and the SFTP protocol implemented on node:crypto alone."
   - title: "Modern Crypto"

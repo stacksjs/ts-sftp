@@ -21,5 +21,6 @@ unzip ts-sftp.zip && chmod +x ts-sftp-linux-x64
 
 ## Requirements
 
-Bun 1.2 or newer. Nothing else — there are no runtime dependencies and no
-native modules.
+Bun 1.2 or newer, and no native modules. The only runtime dependency is
+`@stacksjs/clapp`, used by the CLI; it has no dependencies of its own, so the
+installed tree is two packages deep at most.

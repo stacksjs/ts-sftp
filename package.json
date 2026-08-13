@@ -2,7 +2,7 @@
   "name": "ts-sftp",
   "type": "module",
   "version": "0.1.2",
-  "description": "A zero-dependency SFTP server for Bun — SSH transport, public key auth, and a pluggable file system.",
+  "description": "An SFTP server for Bun \u2014 SSH transport, public key auth, and a pluggable file system.",
   "author": "Chris Breuer <chris@stacksjs.org>",
   "license": "MIT",
   "homepage": "https://github.com/stacksjs/ts-sftp#readme",
@@ -19,8 +19,7 @@
     "server",
     "file-transfer",
     "bun",
-    "typescript",
-    "zero-dependency"
+    "typescript"
   ],
   "exports": {
     ".": {
@@ -73,6 +72,9 @@
     "typecheck": "bun --bun tsc --noEmit",
     "format": "bunx --bun pickier . --format",
     "format:fix": "bunx --bun pickier . --format --write"
+  },
+  "dependencies": {
+    "@stacksjs/clapp": "^0.2.13"
   },
   "devDependencies": {
     "better-dx": "^0.2.15"

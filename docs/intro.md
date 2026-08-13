@@ -2,8 +2,10 @@
 
 `ts-sftp` is an SFTP server written in TypeScript for Bun. It implements the
 SSH transport, key exchange, public key authentication, and the SFTP subsystem
-directly, using only `node:crypto` — there is no dependency to audit, nothing
-native to compile, and no `sshd` to configure alongside your app.
+directly, using only `node:crypto` — nothing native to compile, and no `sshd`
+to configure alongside your app. The protocol implementation has no
+dependencies; the CLI uses [`@stacksjs/clapp`](https://github.com/stacksjs/clapp)
+for argument parsing, which has none of its own.
 
 ## Why run your own
 

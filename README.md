@@ -1,11 +1,13 @@
 # ts-sftp
 
-An SFTP server for Bun, with no dependencies.
+An SFTP server for Bun.
 
 The SSH transport, key exchange, public key authentication, and the SFTP
-subsystem are implemented in TypeScript on top of `node:crypto` — nothing else
-is installed, nothing native is compiled, and the whole thing runs anywhere Bun
-runs.
+subsystem are implemented in TypeScript on top of `node:crypto` — nothing
+native is compiled, and the whole thing runs anywhere Bun runs. The protocol
+implementation pulls in nothing at all; the only package installed alongside it
+is [`@stacksjs/clapp`](https://github.com/stacksjs/clapp), which the CLI uses
+for argument parsing and which has no dependencies of its own.
 
 ## Features
 
@@ -20,6 +22,8 @@ runs.
 - **Pluggable storage** — implement `SftpFileSystem` to serve something other
   than local disk (object storage, a database, a virtual tree)
 - **Read-only mode** — per server or per user
+- **Backpressure-aware** — a peer that stops reading is hung up on rather than
+  buffered until the process runs out of memory
 
 ## Install
 
