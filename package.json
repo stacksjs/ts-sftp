@@ -74,10 +74,10 @@
     "format:fix": "bunx --bun pickier . --format --write"
   },
   "dependencies": {
-    "@stacksjs/clapp": "^0.2.13"
+    "@stacksjs/clapp": "^0.2.15"
   },
   "devDependencies": {
-    "better-dx": "^0.2.15"
+    "better-dx": "^0.2.25"
   },
   "git-hooks": {
     "pre-commit": {
